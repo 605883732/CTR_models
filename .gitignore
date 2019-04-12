@@ -1,2 +1,3 @@
-Test.*
+*.ipynb
+nohup.out
 __pycache__/
