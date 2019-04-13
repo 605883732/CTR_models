@@ -132,10 +132,11 @@ DCN_params=tf.contrib.training.HParams(
 # XDeepFM
 XDeepFM_params=tf.contrib.training.HParams(
                     model='xdeepfm',
-                    norm=True,
+                    batch_norm=True,
                     batch_norm_decay=0.9,
                     hidden_size=[128,128],
-                    cross_layer_sizes=[128,128,128],
+                    dnn_dropout=[0.5,0.5],
+                    cin_layer_sizes=[128,128,128],
                     embedding_size=8,
                     hash_ids=int(2e5),
                     batch_size=64,
@@ -146,10 +147,13 @@ XDeepFM_params=tf.contrib.training.HParams(
                     epoch=2,
                     metric='auc',
                     activation=['relu','relu','relu'],
-                    cross_activation='identity',
+                    cin_activation='identity',
                     init_method='uniform',
                     init_value=0.1,
-                    field_size=len(features))
+                    field_size=len(features),
+                    cin_bias=False,
+                    cin_direct=False
+)
 
 
 
