@@ -1,3 +1,4 @@
 *.ipynb
 nohup*
 __pycache__/
+model_tmp/
