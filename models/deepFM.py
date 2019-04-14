@@ -51,6 +51,10 @@ class Model(BaseModel):
         self.emb_v2=tf.get_variable(shape=[hparams.hash_ids,hparams.embedding_size],
                                     initializer=initializer,name='emb_v2')
         
+        # 各种weights
+        self.weights = self._initialize_weights()
+        
+        
         """
             1阶部分
         """
@@ -84,14 +88,8 @@ class Model(BaseModel):
         # y_deep : [None, field_size * embedding_size]
         y_deep = tf.reshape(emb_inp_v2,shape=[-1, hparams.field_size * hparams.embedding_size])
         
-        input_size =int(y_deep.shape[1])
-        for idx in range(0, len(hparams.hidden_size)):
-            glorot = np.sqrt(2.0 / (input_size + hparams.hidden_size[idx]))
-            W = tf.Variable(np.random.normal(loc=0, scale=glorot,size=(input_size, hparams.hidden_size[idx])), 
-                             dtype=tf.float32)
-            b = tf.Variable(np.random.normal(loc=0, scale=glorot, size=(1, hparams.hidden_size[idx])),
-                            dtype=tf.float32)
-            y_deep = tf.add(tf.matmul(y_deep, W), b) 
+        for idx in range(0, len(hparams.hidden_size)): 
+            y_deep = tf.add(tf.matmul(y_deep, self.weights["layer_%d" %idx]), self.weights["bias_%d" %idx]) 
             
             """Batch Normalization"""
             if hparams.batch_norm is True:
@@ -103,31 +101,60 @@ class Model(BaseModel):
             """dropout"""
             y_deep = tf.nn.dropout(y_deep, self.dnn_dropout[idx]) 
             
-            # input_size的形状重新设定
-            input_size =int(y_deep.shape[1]) 
             
     
         concat_input = tf.concat([first_order,second_order,y_deep],axis=1) #(None,175)
-        input_size = int(concat_input.shape[1])
-        glorot = np.sqrt(2.0 / (input_size + 1))
-        W = tf.Variable(np.random.normal(loc=0, scale=glorot,size=(input_size, 1)), dtype=tf.float32)
-        #b = tf.Variable(np.random.normal(loc=0, scale=glorot, size=(1,)),dtype=np.float32)
-        b = tf.Variable(tf.constant(0.01),dtype=tf.float32)
         
-        logit=tf.matmul(concat_input,W)+b  # (None,1)
+        
+        logit=tf.matmul(concat_input,self.weights["concat_projection"])+self.weights["concat_bias"]  # (None,1)
         """logit 要和 label 维度一致"""
         logit=tf.reshape(logit,[-1]) #(None,)
         
         self.prob=tf.nn.sigmoid(logit)
         self.loss = tf.losses.log_loss(self.label, self.prob)
+        
+        """l2正则"""
+        if hparams.l2 > 0:
+                self.loss += tf.contrib.layers.l2_regularizer(hparams.l2)(self.weights["concat_projection"])
+                for i in range(len(hparams.hidden_size)):
+                    self.loss += tf.contrib.layers.l2_regularizer(hparams.l2)(self.weights["layer_%d"%i])
+                    
         # logit_1=tf.log(self.prob+1e-20)
         # logit_0=tf.log(1-self.prob+1e-20)
         # self.loss=-tf.reduce_mean(self.label*logit_1+(1-self.label)*logit_0) #loss
         # self.cost=-(self.label*logit_1+(1-self.label)*logit_0)
         # 用于模型保存，默认只保存最近的5个模型
         self.saver= tf.train.Saver(max_to_keep=5)
+    
+    def _initialize_weights(self):
+        weights = dict()
 
-            
+        # deep layers
+        num_layer = len(self.hparams.hidden_size)
+        input_size = self.hparams.field_size * self.hparams.embedding_size
+        glorot = np.sqrt(2.0 / (input_size + self.hparams.hidden_size[0]))
+        weights["layer_0"] = tf.Variable(
+            np.random.normal(loc=0, scale=glorot, size=(input_size, self.hparams.hidden_size[0])), dtype=np.float32)
+        weights["bias_0"] = tf.Variable(np.random.normal(loc=0, scale=glorot, size=(1, self.hparams.hidden_size[0])),
+                                                        dtype=np.float32)  
+        for i in range(1, num_layer):
+            glorot = np.sqrt(2.0 / (self.hparams.hidden_size[i-1] + self.hparams.hidden_size[i]))
+            weights["layer_%d" % i] = tf.Variable(
+                np.random.normal(loc=0, scale=glorot, size=(self.hparams.hidden_size[i-1], self.hparams.hidden_size[i])),
+                dtype=np.float32)  # layers[i-1] * layers[i]
+            weights["bias_%d" % i] = tf.Variable(
+                np.random.normal(loc=0, scale=glorot, size=(1, self.hparams.hidden_size[i])),
+                dtype=np.float32)  # 1 * layer[i]
+       
+        concat_size = self.hparams.field_size + self.hparams.embedding_size + self.hparams.hidden_size[-1]
+        weights["concat_projection"] = tf.Variable(
+                        np.random.normal(loc=0, scale=glorot, size=(concat_size, 1)),
+                        dtype=np.float32)  # layers[i-1]*layers[i]
+        weights["concat_bias"] = tf.Variable(tf.constant(0.01), dtype=np.float32)
+        
+        return weights
+    
+    
     def optimizer(self,hparams):
         """
            参数更新，使用了clipped grad
@@ -246,4 +273,5 @@ class Model(BaseModel):
         embedding=np.concatenate(embedding,0)
         return embedding
             
+
 

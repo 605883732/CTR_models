@@ -21,6 +21,7 @@ DNN做ctr预估的优势在于对大规模离散特征建模，paper关注点大
 
 ### ToDo
 - 正则
+    - DeepFM模型已经实现L2正则
 - early_stop
 - tensorboard
 - 指数衰减学习率

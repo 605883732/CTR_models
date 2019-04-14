@@ -45,7 +45,9 @@ DeepFM_params=tf.contrib.training.HParams(
                 #['tnormal','uniform','normal','xavier_normal','xavier_uniform','he_normal','he_uniform']
                 init_method='uniform',
                 init_value=0.1,
-                field_size=len(features))
+                field_size=len(features),
+                l2 = 0.01 # l2正则,不可是整数
+)
 
 # NFFM
 NFFM_params=tf.contrib.training.HParams(
