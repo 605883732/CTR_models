@@ -157,7 +157,25 @@ XDeepFM_params=tf.contrib.training.HParams(
                     cin_direct=False
 )
 
-
+# AFM
+AFM_params=tf.contrib.training.HParams(
+                model='AFM',
+                embedding_size=8,
+                hash_ids=int(1e5),
+                batch_size=64,
+                optimizer="adam",
+                learning_rate=0.001,
+                num_display_steps=100,# 多少个step打印一次输出
+                num_eval_steps=1000,# 多少个step时做一次eval（eval时会保存模型）
+                epoch=2,
+                metric='auc',
+                #['tnormal','uniform','normal','xavier_normal','xavier_uniform','he_normal','he_uniform']
+                init_method='uniform',
+                init_value=0.1,
+                field_size=len(features), 
+                attention_size = 10, #Attention Net 的hidden size
+                l2 = 0.0 # l2正则,不可是整数
+)
 
 if __name__=='__main__':
     model_name = sys.argv[1]
@@ -173,6 +191,8 @@ if __name__=='__main__':
         hparam = DCN_params
     elif(model_name == "XDeepFM"):
         hparam = XDeepFM_params
+    elif(model_name == "AFM"):
+        hparam = AFM_params
         
     utils.print_hparams(hparam) # 打印模型参数
     

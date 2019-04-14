@@ -5,8 +5,10 @@ from models import nffm
 from models import xdeepfm
 from models import deepFM
 from models import DCN
+from models import AFM
 import tensorflow as tf
 from imp import reload
+
 def build_model(hparams):
     tf.reset_default_graph()
     if hparams.model=='fm':
@@ -21,6 +23,8 @@ def build_model(hparams):
         model=deepFM.Model(hparams)
     elif hparams.model=='DCN':
         model=DCN.Model(hparams)
+    elif hparams.model=='AFM':
+        model=AFM.Model(hparams)
         
     config_proto = tf.ConfigProto(log_device_placement=0,allow_soft_placement=0)
     config_proto.gpu_options.allow_growth = True
